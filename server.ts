@@ -3,6 +3,8 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import type { BracketMatch, BracketSetup, BracketState } from './src/types';
+import { createDefaultOverlayState } from './src/lib/state';
 
 export interface OverlayState {
   teamA: string;
@@ -12,19 +14,19 @@ export interface OverlayState {
   matchTitle: string;
   roundName: string;
   matchStatus: string;
+  nextTeamA: string;
+  nextTeamB: string;
+  nextMatchTitle: string;
+  winnerName: string;
+  winnerTeam: string;
+  winnerScore: number;
+  bracketSetup: BracketSetup;
+  bracketMatches: BracketMatch[];
+  bracket: BracketState;
   showOverlay: boolean;
 }
 
-const DEFAULT_STATE: OverlayState = {
-  teamA: 'TEAM A',
-  teamB: 'TEAM B',
-  scoreA: 0,
-  scoreB: 0,
-  matchTitle: 'GRAND FINALS',
-  roundName: 'BEST OF 5',
-  matchStatus: 'LIVE',
-  showOverlay: true,
-};
+const DEFAULT_STATE: OverlayState = createDefaultOverlayState();
 
 async function startServer() {
   const app = express();

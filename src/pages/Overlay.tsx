@@ -2,13 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { socket } from '../lib/socket';
 import { OverlayState } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
+import { normalizeOverlayState } from '../lib/state';
 
 export default function Overlay() {
   const [state, setState] = useState<OverlayState | null>(null);
 
   useEffect(() => {
     socket.on('stateUpdate', (newState: OverlayState) => {
-      setState(newState);
+      setState(normalizeOverlayState(newState));
     });
 
     return () => {
@@ -18,180 +19,319 @@ export default function Overlay() {
 
   if (!state) return null;
 
+  const showOverlay = state.showOverlay !== false;
+  const scoreA = Number.isFinite(state.scoreA) ? state.scoreA : 0;
+  const scoreB = Number.isFinite(state.scoreB) ? state.scoreB : 0;
+  const winnerScore = Number.isFinite(state.winnerScore) ? state.winnerScore : 0;
+
   return (
-    <div className="w-screen h-screen overflow-hidden p-4 sm:p-6 md:p-8 xl:p-12 flex flex-col justify-between font-display relative bg-transparent">
-      
+    <div className="relative h-screen w-screen overflow-hidden bg-transparent font-display">
       <AnimatePresence>
-        {state.showOverlay && (
-          <motion.div
+        {showOverlay && (
+          <motion.section
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-            className="w-full h-full flex flex-col justify-between"
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="relative h-full w-full text-white"
           >
-            
-            {/* TOP ROW */}
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 md:gap-6 items-start">
-              {/* Top Left: Tournament Logo / Info */}
-              <motion.div 
-                initial={{ x: -50, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ duration: 0.6, ease: "easeOut" }}
-                className="bg-[#1A1C1E] p-4 md:p-6 border-l-4 border-orange-core shadow-2xl flex items-center gap-4 md:gap-6 min-w-0 max-w-[32vw] overflow-hidden"
-              >
-                <div className="w-10 h-10 bg-white/10 flex items-center justify-center">
-                  <div className="w-6 h-6 border-2 border-orange-core rotate-45 transform"></div>
-                </div>
-                <div className="min-w-0">
-                  <div className="text-[10px] text-orange-core font-black tracking-widest leading-none mb-1 truncate">OFFICIAL PARTNER</div>
-                  <div className="text-lg font-black tracking-tighter leading-none italic uppercase truncate max-w-full px-2 overflow-visible">KMCLU ESPORTS</div>
-                </div>
-              </motion.div>
+            <div className="absolute inset-0 bg-[#050607]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(249,115,22,0.18),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(255,255,255,0.08),_transparent_22%),linear-gradient(180deg,#0A0B0D_0%,#050607_100%)]" />
+            <div className="absolute inset-0 opacity-25 bg-[linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:72px_72px]" />
+            <div className="relative z-10 h-full w-full overflow-hidden p-6 md:p-8 xl:p-10">
+              <div className="grid h-full w-full grid-rows-[auto_minmax(0,1fr)] gap-4 xl:gap-6">
+                <div className="grid min-h-0 grid-cols-1 gap-4 md:grid-cols-[0.85fr_1.3fr_0.85fr] xl:gap-6">
+                  <motion.section
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35, ease: 'easeOut' }}
+                    className="relative overflow-hidden border border-[#2D2F31] bg-[#111316]/95 shadow-[0_0_30px_rgba(0,0,0,0.45)]"
+                  >
+                    <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-orange-core via-white/70 to-transparent" />
+                    <div className="relative flex h-full items-center gap-4 px-4 py-3 lg:px-5">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center border border-white/10 bg-black/30">
+                        <div className="h-7 w-7 rotate-45 border-2 border-orange-core" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-[10px] font-black uppercase tracking-[0.35em] text-white/45">Tournament Logo</div>
+                        <div className="truncate text-xl font-black italic uppercase tracking-tighter text-white">KMCLU Esports</div>
+                        <AnimatePresence mode="wait">
+                          <motion.div
+                            key={state.roundName}
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -6 }}
+                            transition={{ duration: 0.2, ease: 'easeOut' }}
+                            className="mt-2 truncate text-sm font-black uppercase tracking-[0.3em] text-orange-core"
+                          >
+                            {state.roundName}
+                          </motion.div>
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                  </motion.section>
 
-              {/* Top Center: Match Title */}
-              <AnimatePresence mode="popLayout">
-                <motion.div
-                  key={state.matchTitle}
-                  initial={{ y: -50, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: -50, opacity: 0 }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                  className="bg-[#1A1C1E] px-6 md:px-10 lg:px-12 py-3 md:py-4 border-b-2 border-orange-core shadow-2xl min-w-0 w-full md:w-[min(42vw,720px)] max-w-[42vw] overflow-hidden mx-auto"
-                >
-                  <div className="text-[10px] text-white/50 font-bold uppercase tracking-[4px] text-center mb-1">Tournament Series</div>
-                  <h2 className="text-base md:text-lg lg:text-xl font-black italic tracking-tighter text-white uppercase flex items-center justify-center gap-0 truncate max-w-full px-2 overflow-visible">
-                    {state.matchTitle}
-                  </h2>
-                </motion.div>
-              </AnimatePresence>
-              
-              {/* Top Right Spacer / Info */}
-              <div className="bg-[#1A1C1E] p-4 md:p-6 flex flex-col items-end opacity-100 justify-self-end min-w-0">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-orange-core rounded-full animate-pulse"></div>
-                  <span className="text-[11px] font-black tracking-widest text-white uppercase truncate max-w-[18ch]">LIVE BROADCAST</span>
+                  <motion.section
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35, ease: 'easeOut', delay: 0.03 }}
+                    className="relative overflow-hidden border border-[#2D2F31] bg-[#111316]/95 shadow-[0_0_30px_rgba(0,0,0,0.45)]"
+                  >
+                    <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-orange-core via-white/70 to-transparent" />
+                    <div className="flex h-full items-center justify-center px-5 py-3 text-center">
+                      <AnimatePresence mode="wait">
+                        <motion.h2
+                          key={state.matchTitle}
+                          initial={{ opacity: 0, y: -8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 8 }}
+                          transition={{ duration: 0.22, ease: 'easeOut' }}
+                          className="truncate text-3xl md:text-4xl xl:text-5xl font-black italic tracking-tighter uppercase"
+                        >
+                          {state.matchTitle}
+                        </motion.h2>
+                      </AnimatePresence>
+                    </div>
+                  </motion.section>
+
+                  <motion.section
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35, ease: 'easeOut', delay: 0.06 }}
+                    className="relative overflow-hidden border border-[#2D2F31] bg-[#111316]/95 shadow-[0_0_30px_rgba(0,0,0,0.45)]"
+                  >
+                    <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-orange-core via-white/70 to-transparent" />
+                    <div className="flex h-full items-center justify-end px-4 py-3 lg:px-5">
+                      <div className="flex items-center gap-2 border border-white/10 bg-black/30 px-3 py-2 text-[11px] font-black uppercase tracking-[0.35em] text-white/80">
+                        <span className="h-2 w-2 rounded-full bg-orange-core shadow-[0_0_12px_rgba(249,115,22,0.9)]" />
+                        {state.matchStatus}
+                      </div>
+                    </div>
+                  </motion.section>
+                </div>
+
+                <div className="grid min-h-0 grid-cols-1 gap-4 xl:grid-cols-[1.7fr_1fr_1fr] xl:gap-6">
+                  <motion.section
+                    initial={{ opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, ease: 'easeOut' }}
+                    className="relative overflow-hidden border border-[#2D2F31] bg-[#111316]/95 shadow-[0_0_40px_rgba(0,0,0,0.5)]"
+                  >
+                    <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-orange-core via-white/80 to-transparent" />
+                    <div className="absolute left-0 top-0 h-full w-1 bg-orange-core" />
+                    <div className="flex h-full flex-col p-4 md:p-5 xl:p-6">
+                      <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-3">
+                        <div className="min-w-0">
+                          <div className="text-[10px] font-black uppercase tracking-[0.35em] text-orange-core">Current Match</div>
+                          <div className="mt-1 truncate text-lg font-black uppercase tracking-[0.3em] text-white/70">
+                            Main Event
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2 border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black uppercase tracking-[0.3em] text-white/70">
+                          <span className="h-2 w-2 bg-orange-core" />
+                          Live
+                        </div>
+                      </div>
+
+                      <div className="mt-4 grid min-h-0 flex-1 grid-rows-[auto_auto_1fr] gap-3">
+                        <div className="flex min-w-0 items-center justify-between gap-4">
+                          <div className="min-w-0">
+                            <div className="text-[10px] uppercase tracking-[0.35em] text-white/40">Team A</div>
+                            <AnimatePresence mode="wait">
+                              <motion.div
+                                key={state.teamA}
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -6 }}
+                                transition={{ duration: 0.2, ease: 'easeOut' }}
+                                className="truncate text-2xl md:text-3xl xl:text-4xl font-black italic uppercase tracking-tighter"
+                              >
+                                {state.teamA}
+                              </motion.div>
+                            </AnimatePresence>
+                          </div>
+                          <AnimatePresence mode="wait">
+                            <motion.div
+                              key={scoreA}
+                              initial={{ opacity: 0, scale: 0.96 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.96 }}
+                              transition={{ duration: 0.2, ease: 'easeOut' }}
+                              className="font-mono text-6xl font-black leading-none text-orange-core md:text-7xl xl:text-8xl"
+                            >
+                              {scoreA.toString().padStart(2, '0')}
+                            </motion.div>
+                          </AnimatePresence>
+                        </div>
+
+                        <div className="flex items-center justify-center border-y border-orange-core/30 bg-orange-core px-4 py-2 text-sm font-black uppercase tracking-[0.45em] text-black">
+                          VS
+                        </div>
+
+                        <div className="flex min-w-0 items-center justify-between gap-4">
+                          <div className="min-w-0">
+                            <div className="text-[10px] uppercase tracking-[0.35em] text-white/40">Team B</div>
+                            <AnimatePresence mode="wait">
+                              <motion.div
+                                key={state.teamB}
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -6 }}
+                                transition={{ duration: 0.2, ease: 'easeOut' }}
+                                className="truncate text-2xl md:text-3xl xl:text-4xl font-black italic uppercase tracking-tighter"
+                              >
+                                {state.teamB}
+                              </motion.div>
+                            </AnimatePresence>
+                          </div>
+                          <AnimatePresence mode="wait">
+                            <motion.div
+                              key={scoreB}
+                              initial={{ opacity: 0, scale: 0.96 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.96 }}
+                              transition={{ duration: 0.2, ease: 'easeOut' }}
+                              className="font-mono text-6xl font-black leading-none text-white md:text-7xl xl:text-8xl"
+                            >
+                              {scoreB.toString().padStart(2, '0')}
+                            </motion.div>
+                          </AnimatePresence>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto]">
+                          <div className="overflow-hidden border border-white/10 bg-black/25 px-4 py-3">
+                            <div className="text-[10px] uppercase tracking-[0.35em] text-white/40">Round Name</div>
+                            <AnimatePresence mode="wait">
+                              <motion.div
+                                key={state.roundName}
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -6 }}
+                                transition={{ duration: 0.2, ease: 'easeOut' }}
+                                className="truncate text-lg md:text-xl xl:text-2xl font-black uppercase tracking-tighter"
+                              >
+                                {state.roundName}
+                              </motion.div>
+                            </AnimatePresence>
+                          </div>
+                          <div className="overflow-hidden border border-orange-core/40 bg-[#1A1C1E] px-4 py-3">
+                            <div className="text-[10px] uppercase tracking-[0.35em] text-white/40">Status</div>
+                            <AnimatePresence mode="wait">
+                              <motion.div
+                                key={state.matchStatus}
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -6 }}
+                                transition={{ duration: 0.2, ease: 'easeOut' }}
+                                className="truncate text-lg md:text-xl xl:text-2xl font-black uppercase tracking-[0.25em] text-orange-core"
+                              >
+                                {state.matchStatus}
+                              </motion.div>
+                            </AnimatePresence>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.section>
+
+                  <motion.section
+                    initial={{ opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, ease: 'easeOut', delay: 0.04 }}
+                    className="relative overflow-hidden border border-[#2D2F31] bg-[#111316]/95 shadow-[0_0_40px_rgba(0,0,0,0.5)]"
+                  >
+                    <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-orange-core via-white/80 to-transparent" />
+                    <div className="flex h-full flex-col p-4 md:p-5 xl:p-6">
+                      <div className="border-b border-white/10 pb-3 text-[10px] font-black uppercase tracking-[0.35em] text-orange-core">
+                        Up Next
+                      </div>
+                      <div className="mt-4 flex min-h-0 flex-1 flex-col justify-between gap-4">
+                        <AnimatePresence mode="wait">
+                          <motion.div
+                            key={`${state.nextTeamA}-${state.nextTeamB}`}
+                            initial={{ opacity: 0, x: 8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -8 }}
+                            transition={{ duration: 0.2, ease: 'easeOut' }}
+                            className="min-w-0 text-xl md:text-2xl font-black italic uppercase tracking-tighter"
+                          >
+                            {state.nextTeamA} vs {state.nextTeamB}
+                          </motion.div>
+                        </AnimatePresence>
+                        <AnimatePresence mode="wait">
+                          <motion.div
+                            key={state.nextMatchTitle}
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -6 }}
+                            transition={{ duration: 0.2, ease: 'easeOut' }}
+                            className="overflow-hidden border-l-4 border-orange-core bg-black/30 px-4 py-3 text-base md:text-lg xl:text-xl font-black uppercase tracking-[0.2em] text-white/90"
+                          >
+                            {state.nextMatchTitle}
+                          </motion.div>
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                  </motion.section>
+
+                  <motion.section
+                    initial={{ opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, ease: 'easeOut', delay: 0.08 }}
+                    className="relative overflow-hidden border border-[#2D2F31] bg-[#111316]/95 shadow-[0_0_40px_rgba(0,0,0,0.5)]"
+                  >
+                    <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-orange-core via-white/80 to-transparent" />
+                    <div className="flex h-full flex-col p-4 md:p-5 xl:p-6">
+                      <div className="border-b border-white/10 pb-3 text-[10px] font-black uppercase tracking-[0.35em] text-orange-core">
+                        WINNER
+                      </div>
+                      <div className="mt-4 flex min-h-0 flex-1 flex-col justify-between gap-4">
+                        <AnimatePresence mode="wait">
+                          <motion.div
+                            key={state.winnerName}
+                            initial={{ opacity: 0, x: -8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 8 }}
+                            transition={{ duration: 0.2, ease: 'easeOut' }}
+                            className="truncate text-xl md:text-2xl xl:text-3xl font-black italic uppercase tracking-tighter"
+                          >
+                            {state.winnerName}
+                          </motion.div>
+                        </AnimatePresence>
+                        <AnimatePresence mode="wait">
+                          <motion.div
+                            key={state.winnerTeam}
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -6 }}
+                            transition={{ duration: 0.2, ease: 'easeOut' }}
+                            className="overflow-hidden border border-white/10 bg-black/30 px-4 py-3 text-base md:text-lg xl:text-xl font-black uppercase tracking-[0.2em] text-white/85"
+                          >
+                            {state.winnerTeam}
+                          </motion.div>
+                        </AnimatePresence>
+                        <div className="border-t border-white/10 pt-4">
+                          <div className="text-[10px] uppercase tracking-[0.35em] text-white/40">Match Result</div>
+                          <AnimatePresence mode="wait">
+                            <motion.div
+                              key={winnerScore}
+                              initial={{ opacity: 0, scale: 0.98 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.98 }}
+                              transition={{ duration: 0.2, ease: 'easeOut' }}
+                              className="mt-1 font-mono text-4xl md:text-5xl xl:text-6xl font-black leading-none text-orange-core"
+                            >
+                              {winnerScore.toString().padStart(2, '0')}
+                            </motion.div>
+                          </AnimatePresence>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.section>
                 </div>
               </div>
             </div>
-
-            {/* CENTER: SCOREBOARD */}
-            <div className="absolute inset-x-0 top-1/2 transform -translate-y-1/2 flex justify-center px-4 md:px-6">
-              <div className="flex items-stretch shadow-2xl w-[min(92vw,1120px)] max-w-full overflow-hidden">
-                {/* Team A */}
-                <motion.div 
-                  initial={{ x: -20, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  className="bg-[#1A1C1E] px-6 md:px-8 py-4 md:py-6 flex-1 min-w-0 flex items-center justify-between gap-4 md:gap-6 border-l-4 border-orange-core overflow-hidden"
-                >
-                  <div className="text-right min-w-0 flex-1">
-                    <div className="text-[10px] text-white/40 font-bold tracking-wider">HOME</div>
-                    <AnimatePresence mode="popLayout">
-                      <motion.div
-                        key={state.teamA}
-                        initial={{ y: 10, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: -10, opacity: 0 }}
-                          className="text-lg md:text-xl lg:text-3xl font-black italic tracking-tighter text-white uppercase truncate max-w-full px-2 overflow-visible"
-                      >
-                        {state.teamA}
-                      </motion.div>
-                    </AnimatePresence>
-                  </div>
-                  <AnimatePresence mode="popLayout">
-                    <motion.div
-                      key={state.scoreA}
-                      initial={{ scale: 1.5, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className="text-4xl md:text-6xl lg:text-7xl font-black text-orange-core font-mono leading-none"
-                    >
-                      {state.scoreA.toString().padStart(2, '0')}
-                    </motion.div>
-                  </AnimatePresence>
-                </motion.div>
-
-                {/* Score VS Center */}
-                <div className="bg-orange-core text-black h-auto px-4 md:px-6 flex items-center justify-center font-black italic -skew-x-12 z-10">
-                  <span className="skew-x-12 tracking-tighter">VS</span>
-                </div>
-
-                {/* Team B */}
-                <motion.div 
-                  initial={{ x: 20, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  className="bg-[#1A1C1E] px-6 md:px-8 py-4 md:py-6 flex-1 min-w-0 flex flex-row-reverse items-center justify-between gap-4 md:gap-6 border-r-4 border-white/20 overflow-hidden"
-                >
-                  <div className="text-left min-w-0 flex-1">
-                     <div className="text-[10px] text-white/40 font-bold tracking-wider">AWAY</div>
-                     <AnimatePresence mode="popLayout">
-                      <motion.div
-                        key={state.teamB}
-                        initial={{ y: 10, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: -10, opacity: 0 }}
-                        className="text-lg md:text-xl lg:text-3xl font-black italic tracking-tighter text-white uppercase truncate max-w-full px-2 overflow-visible"
-                      >
-                        {state.teamB}
-                      </motion.div>
-                    </AnimatePresence>
-                  </div>
-                  <AnimatePresence mode="popLayout">
-                    <motion.div
-                      key={state.scoreB}
-                      initial={{ scale: 1.5, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className="text-4xl md:text-6xl lg:text-7xl font-black text-white font-mono leading-none"
-                    >
-                      {state.scoreB.toString().padStart(2, '0')}
-                    </motion.div>
-                  </AnimatePresence>
-                </motion.div>
-              </div>
-            </div>
-
-            {/* BOTTOM CENTER: ROUND / STATUS */}
-            <div className="flex justify-center w-full">
-                <motion.div 
-                initial={{ y: 50, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                className="flex items-stretch shadow-2xl bg-[#1A1C1E] border-t-2 border-orange-core w-full max-w-[min(92vw,900px)] mx-auto overflow-hidden"
-              >
-                <div className="px-6 md:px-10 py-3 bg-orange-core text-black font-black uppercase italic tracking-widest flex items-center">
-                  <AnimatePresence mode="wait">
-                    <motion.span
-                      key={state.roundName}
-                      initial={{ opacity: 0, x: 10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -10 }}
-                      className="truncate max-w-[28ch] px-2 overflow-visible"
-                    >
-                      {state.roundName}
-                    </motion.span>
-                  </AnimatePresence>
-                </div>
-                <div className="px-6 md:px-10 py-3 font-black uppercase italic tracking-widest flex items-center gap-4 text-white min-w-0">
-                  <AnimatePresence mode="wait">
-                    <motion.span
-                      key={state.matchStatus}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="truncate max-w-[36ch] px-2 overflow-visible"
-                    >
-                      {state.matchStatus}
-                    </motion.span>
-                  </AnimatePresence>
-                  <div className="flex gap-1">
-                    <div className="w-3 h-3 bg-orange-core"></div>
-                    <div className="w-3 h-3 bg-orange-core"></div>
-                    <div className="w-3 h-3 bg-white/10"></div>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-
-          </motion.div>
+          </motion.section>
         )}
       </AnimatePresence>
     </div>
